@@ -1,6 +1,6 @@
 <?php
 
-use Stev\DataDogAuditGUIBundle\Services;
+namespace Stev\DataDogAuditGUIBundle\Services;
 
 /**
  * Description of AuditReader
@@ -16,10 +16,49 @@ class AuditReader
      */
     private $em;
 
-    public function getAuditForAssoc($em, $meta, $assocsToInclude, $fk, $includeInserts)
+    public function __construct(\Doctrine\ORM\EntityManager $em)
+    {
+        $this->em = $em;
+    }
+
+    public function getAuditForEntity($entityId, $entityClass, array $assocsToInclude = array(), $includeInserts = true)
+    {
+        $meta = $this->em->getClassMetadata($entityClass);
+
+        $fieldMappings = $meta->fieldMappings;
+
+        foreach ($meta->associationMappings as $field => $assocMapping) {
+            $fieldMappings[$field] = $this->em->getClassMetadata($assocMapping['targetEntity'])->table;
+        }
+
+        $assocDiffs = array();
+        if (!empty($assocsToInclude)) {
+            $assocDiffs = $this->getAuditForAssoc($meta, $assocsToInclude, $entityId, $includeInserts);
+        }
+
+        $results = $this->buildResultsDiff($entityId, $entityClass, $includeInserts);
+
+        return array(
+            'results' => $results,
+            'assocDiffs' => $assocDiffs,
+            'fieldMappings' => $fieldMappings,
+        );
+    }
+
+    /**
+     *
+     * @param type $em
+     * @param type $meta
+     * @param type $assocsToInclude
+     * @param type $fk
+     * @param type $includeInserts
+     * @return type
+     * @throws \Exception
+     */
+    private function getAuditForAssoc($meta, $assocsToInclude, $fk, $includeInserts)
     {
         $diff = array();
-        $currentObj = $em->getRepository($meta->rootEntityName)->find($fk);
+        $currentObj = $this->em->getRepository($meta->rootEntityName)->find($fk);
 
         if (!$currentObj) {
             throw new \Exception('Invalid ID for the searched object!');
@@ -49,22 +88,26 @@ class AuditReader
         return $diff;
     }
 
-    public function buildResultsDiff($fk, $entityClass, $includeInserts = false)
+    private function buildResultsDiff($fk, $entityClass, $includeInserts = false)
     {
-        $em = $this->getDoctrine()->getManager();
-        $connection = $em->getConnection();
+        $connection = $this->em->getConnection();
 
-        $meta = $em->getClassMetadata($entityClass);
+        $meta = $this->em->getClassMetadata($entityClass);
 
         $tbl = $meta->table['name'];
 
-        $query = $connection->prepare(
-                "SELECT al.diff, al.action, al.logged_at, al.blame_id, aa.label as user "
-                . "FROM audit_logs AS al LEFT JOIN audit_associations AS aa ON al.blame_id = aa.id "
-                . "WHERE al.tbl = :table AND al.blame_id IS NOT NULL AND al.source_id IN "
-                . "(SELECT id FROM audit_associations  WHERE tbl = :table AND fk=:fk)"
-        );
+        $sql = <<<EOD
+SELECT al.diff, al.action, al.loggedAt, al.blame_id, aa.label as user
+FROM audit_logs AS al LEFT JOIN audit_associations AS aa ON al.blame_id = aa.id
+WHERE al.tbl = :table AND al.blame_id IS NOT NULL AND al.source_id IN
+(SELECT id FROM audit_associations  WHERE tbl = :table AND fk=:fk)
+EOD;
 
+        if ((bool) $includeInserts === false) {
+            $sql .= ' AND al.type != "insert" ';
+        }
+
+        $query = $connection->prepare($sql);
 
         $query->execute(array('fk' => $fk, 'table' => $tbl));
         $results = $query->fetchAll();
@@ -73,11 +116,11 @@ class AuditReader
             unset($results[$i]['diff']['updatedAt']);
         }
 
-        if ($includeInserts === false) {
-            $results = array_filter($results, function($elem) {
-                return $elem['action'] !== 'insert';
-            });
-        }
+//        if ((bool) $includeInserts === false) {
+//            $results = array_filter($results, function($elem) {
+//                return $elem['action'] !== 'insert';
+//            });
+//        }
 
         return $results;
     }

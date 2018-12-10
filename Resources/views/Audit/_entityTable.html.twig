@@ -1,0 +1,51 @@
+{% trans_default_domain "StevDataDogAuditReader" %}
+<div class="table-responsive">
+    <table id="" class="table table-bordered table-striped audit-table">
+        <thead>
+            <tr>
+                <th>{{ 'date' | trans | desc('Date')}}</th>
+                <th>{{ 'action' | trans | desc('Action')}}</th>
+                <th>{{ 'changes' | trans | desc('Changes') }}</th>
+                <th>{{ 'user' | trans | desc('User') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+
+                <tr class="">
+                    <td>
+                        {{ entry.loggedAt  |date('d-m-Y H:i:s T', app.user.timezone|default('UTC')) }}<br/>
+                    </td>
+                    <td>
+                        {{ entry.action }}
+                    </td>
+                    <td>
+                        {% for key,modification in entry.diff if modification.old !=  modification.new %}
+                            {% if fieldMappings[key]['options'] is defined and fieldMappings[key]['options']['comment']  is defined%}
+                                <b>{{ fieldMappings[key]['options']['comment']}}</b> :
+                            {% else %}
+                                <b>{{ key}}</b> :
+                            {% endif%}
+
+                            {% if modification.old is iterable %}
+                                to <span class="highlight-change assocDataAudit" data-url='{{path('audit_entity_logs', {'entityClass':modification.old['class'], 'entityId':modification.old['fk']})}}'  data-tbl='{{modification.old['tbl']}}'>{{ modification.old['label'] }}</span>
+                            {% else %}
+                                From <span class="highlight-change">{{ modification.old  | default("-") }}</span>
+                            {% endif %}
+                            {% if modification.new is iterable %}
+                                to <span class="highlight-change assocDataAudit" data-url='{{path('audit_entity_logs',{'entityClass':modification.new['class'], 'entityId':modification.new['fk']})}}' data-tbl='{{modification.new['tbl']}}'>{{ modification.new['label'] }}</span>
+                            {% else %}
+                                to <span class="highlight-change">{{ modification.new | default("-") }}</span>
+                            {% endif %}
+                            <br/>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {{ entry.user }}
+                    </td>
+                </tr>
+
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

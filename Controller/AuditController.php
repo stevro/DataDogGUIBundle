@@ -4,9 +4,8 @@ namespace Stev\DataDogAuditGUIBundle\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 
 /*
  * Configurari pentru a afisa modalul cu audit
@@ -25,22 +24,24 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Audit controller.
  *
- * @Route("/audit")
  */
 class AuditController extends Controller
 {
 
     /**
      * @Route("/logs", name="audit_logs")
-     * 
      */
     public function indexAction(Request $request)
     {
         $entityClass = $request->get('entityClass');
         $entityId = $request->get('entityid');
         if (empty($entityClass) && empty($entityId)) {
-            return array();
+            return $this->render('StevDataDogAuditGUIBundle:Audit:index.html.twig', array(
+                        'entries' => array(),
+                        'fieldMappings' => array()
+            ));
         }
+
         $em = $this->getDoctrine()->getManager();
         $meta = $em->getClassMetadata($entityClass);
         $table = $meta->getTableName();
@@ -85,45 +86,29 @@ class AuditController extends Controller
     }
 
     /**
-     * @Route("/entity", name="audit_entity_logs", options={"expose"=true})
-     *     
-     * Ca sa folosesti tot ce trebuie sa faci e sa ai pe fiecare linie din tabel pt care vrei audit
-     * data-audit-url, data-audit-entity-class, data-audit-entity-id
-     * si sa apelezi entityAuditLogs()
-     *
+     * @Route("/entity/{entityClass}/{entityId}", name="audit_entity_logs", options={"expose"=true})
+     * @Method("GET")
      */
-    public function entityAuditAction(Request $request)
+    public function entityAuditAction(Request $request, $entityClass, $entityId)
     {
-        $fk = $request->query->get('fk');
-        $tbl = $request->query->get('tbl', null);
-        $entity = $request->query->get('entity');
         $includeInserts = (bool) $request->query->get('includeInserts', true);
         $assocsToInclude = $request->query->get('includeAssocs', array());
 
-        $em = $this->getDoctrine()->getManager();
-        $meta = $em->getClassMetadata($entity);
-
-        if (null === $tbl) {
-            $tbl = $meta->table['name'];
+        if (!is_array($assocsToInclude)) {
+            $assocsToInclude = array();
         }
 
-        $fieldMappings = $meta->fieldMappings;
+        /* @var $auditReader \Stev\DataDogAuditGUIBundle\Services\AuditReader */
+        $auditReader = $this->get('stev_data_dog_audit_gui.audit_reader');
 
-        foreach ($meta->associationMappings as $field => $assocMapping) {
-            $fieldMappings[$field] = $em->getClassMetadata($assocMapping['targetEntity'])->table;
-        }
+        $audit = $auditReader->getAuditForEntity($entityId, $entityClass, $assocsToInclude, $includeInserts);
 
-        $assocDiffs = array();
-        if (!empty($assocsToInclude)) {
-            $assocDiffs = $this->getAuditForAssoc($em, $meta, $assocsToInclude, $fk, $includeInserts);
-        }
-
-        $results = $this->buildResultsDiff($fk, $entity);
+        //$request->headers->get('content-type');
 
         return $this->render('StevDataDogAuditGUIBundle:Audit:entity.html.twig', array(
-                    'entries' => $results,
-                    'assocs' => $assocDiffs,
-                    'fieldMappings' => $fieldMappings,
+                    'entries' => $audit['results'],
+                    'assocs' => $audit['assocDiffs'],
+                    'fieldMappings' => $audit['fieldMappings'],
                     'includeInserts' => $includeInserts,
         ));
     }
