@@ -35,7 +35,7 @@ Run assets:install and then add the following JS in your HTML:
 # How to use it
 You can use the provided GUI by calling the following function from your JS.
 
-     StevDataDogAuditGUI.openEntityAuditLogs(slot.id, 'SmartTimeslotBundle:Event', [], true);
+     StevDataDogAuditGUI.openEntityAuditLogs(entity.id, 'AppBundle:Entity', [], true);
      
 It will open a modal with the audit logs displayed in a paged table.
 REQUIRES jQuery and jQuery DataTables.
