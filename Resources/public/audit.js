@@ -190,7 +190,7 @@ function StevDataDogAuditGUI(jQuery) {
 //        this.openLinkedAuditWindow();
 //    };
 
-    this.openEntityAuditLogs = function (entityId, entityClass, includeAssocs = [], includeInserts = false) {
+    this.openEntityAuditLogs = function (entityId, entityClass, includeAssocs, includeInserts) {
         if (!entityId || !entityClass) {
 
             console.error('You must provide an entity ID and the class name');
@@ -226,14 +226,15 @@ function StevDataDogAuditGUI(jQuery) {
                 });
     };
 
-    this.getLogsForEntity = function (entityId, entityClass, dataType = 'html', includeAssocs = [], includeInserts = false) {
+    this.getLogsForEntity = function (entityId, entityClass, dataType, includeAssocs, includeInserts) {
+
         return jQuery.ajax({
-            dataType: dataType,
+            dataType: typeof dataType === 'undefined' ? 'html' : dataType,
             type: "GET",
             url: Routing.generate('audit_entity_logs', {entityId: entityId, entityClass: entityClass}),
             data: {
-                includeInserts: includeInserts,
-                includeAssocs: includeAssocs
+                includeInserts: typeof includeInserts === 'undefined' ? false : includeInserts,
+                includeAssocs: typeof includeAssocs === 'undefined' ? [] : includeAssocs,
             },
         });
     };
