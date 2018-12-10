@@ -1,0 +1,139 @@
+{% trans_default_domain "StevDataDogAuditReader" %}
+<table id="audit-table" class="table table-condensed table-striped table-hover table-bordered pull-left records_list dataTables_wrapper">
+    <thead>
+        <tr>
+            <th>{{ 'date' | trans | desc('Date')}}</th>
+            <th>{{ 'action' | trans | desc('Action')}}</th>
+            <th>{{ 'mentions' | trans | desc('Mentions') }}</th>
+            <th>{{ 'operator' | trans | desc('Operator') }}</th>
+            <th>{{ 'TLoc' | trans | desc('TLoc') }}</th>
+            <th>{{ 'TLuna' | trans | desc('TLuna') }}</th>
+            <th>{{ 'Rez'|trans | desc('Rez') }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {#        {% for entry in entries if entry.action != 'insert'%}#}
+        {% for entry in entries %}
+            {% set time = '' %}
+            {% for key,modification in entry.diff %}
+                {% if modification.old !=  modification.new%}
+                    <tr class="partner_details cursor-pointer from-modal">
+                        <td>
+                            {{ entry.logged_at  |date('d-m-Y H:i:s T', 'Europe/Bucharest') }}<br/>
+                        </td>
+                        <td>
+                            {{ entry.action }}
+                        </td>
+                        <td>
+                            {% if fieldMappings[key]['options'] is defined and fieldMappings[key]['options']['comment']  is defined%}
+                                <b>{{ fieldMappings[key]['options']['comment']}}</b> :
+                            {% else %}
+                                <b>{{ key}}</b> :
+                            {% endif%}
+
+                            {% if modification.old is iterable %}
+                                in <span class="highlight-change assocDataAudit" data-url='{{path('audit_entity_logs')}}' data-fk='{{modification.old['fk']}}' data-tbl='{{modification.old['tbl']}}' data-entity='{{modification.old['class']}}'>{{ modification.old['label'] }}</span>
+                            {% else %}
+                                Din <span class="highlight-change">{{ modification.old  | default("-") }}</span>
+                            {% endif %}
+                            {% if modification.new is iterable %}
+                                in <span class="highlight-change assocDataAudit" data-url='{{path('audit_entity_logs')}}' data-fk='{{modification.new['fk']}}' data-tbl='{{modification.new['tbl']}}' data-entity='{{modification.new['class']}}'>{{ modification.new['label'] }}</span>
+                            {% else %}
+                                in <span class="highlight-change">{{ modification.new | default("-") }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ entry.user }}
+                        </td>
+                        <td>
+                            TLoc
+                        </td>
+                        <td>
+                            TLUNA
+                        </td>
+                        <td>
+                            REz
+                        </td>
+                    </tr>
+                {% endif %}
+
+                {% set time = entry.logged_at %}
+            {% endfor %}
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if assocs | length > 0 %}
+    {% for assocName, assocDiffs in assocs %}
+        <hr/>
+        <strong>{{assocName | capitalize}}</strong><br/>
+        {% for objName,objDiffs in assocDiffs %}
+            <strong>{{objName | capitalize}}</strong><br/>
+            <table id="" class="audit-table-assocs table table-condensed table-striped table-hover table-bordered pull-left records_list dataTables_wrapper">
+                <thead>
+                    <tr>
+                        <th>{{ 'date' | trans | desc('Date')}}</th>
+                        <th>{{ 'action' | trans | desc('Action')}}</th>
+                        <th>{{ 'mentions' | trans | desc('Mentions') }}</th>
+                        <th>{{ 'operator' | trans | desc('Operator') }}</th>
+                        <th>{{ 'TLoc' | trans | desc('TLoc') }}</th>
+                        <th>{{ 'TLuna' | trans | desc('TLuna') }}</th>
+                        <th>{{ 'Rez'|trans | desc('Rez') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+{#                    {% set time = '' %}#}
+
+                    {% for entry in objDiffs %}
+                        {% for key,modification in entry.diff %}
+                            {% if modification.old !=  modification.new%}
+                                <tr class="partner_details cursor-pointer from-modal">
+                                    <td>
+                                        {{ entry.logged_at  |date('d-m-Y H:i:s T', 'Europe/Bucharest') }}<br/>
+                                    </td>
+                                    <td>
+                                        {{ entry.action }}
+                                    </td>
+                                    <td>
+                                        {% if fieldMappings[key]['options'] is defined and fieldMappings[key]['options']['comment']  is defined%}
+                                            <b>{{ fieldMappings[key]['options']['comment']}}</b> :
+                                        {% else %}
+                                            <b>{{ key}}</b> :
+                                        {% endif%}
+
+                                        {% if modification.old is iterable %}
+                                            in <span class="highlight-change assocDataAudit" data-url='{{path('audit_entity_logs')}}' data-fk='{{modification.old['fk']}}' data-tbl='{{modification.old['tbl']}}' data-entity='{{modification.old['class']}}'>{{ modification.old['label'] }}</span>
+                                        {% else %}
+                                            Din <span class="highlight-change">{{ modification.old  | default("-") }}</span>
+                                        {% endif %}
+                                        {% if modification.new is iterable %}
+                                            in <span class="highlight-change assocDataAudit" data-url='{{path('audit_entity_logs')}}' data-fk='{{modification.new['fk']}}' data-tbl='{{modification.new['tbl']}}' data-entity='{{modification.new['class']}}'>{{ modification.new['label'] }}</span>
+                                        {% else %}
+                                            in <span class="highlight-change">{{ modification.new | default("-") }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ entry.user }}
+                                    </td>
+                                    <td>
+                                        TLoc
+                                    </td>
+                                    <td>
+                                        TLUNA
+                                    </td>
+                                    <td>
+                                        REz
+                                    </td>
+                                </tr>
+                            {% endif %}
+
+{#                            {% set time = entry.logged_at %}#}
+                        {% endfor %}
+                    {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        {% endfor %}
+    {% endfor %}
+{% endif %}

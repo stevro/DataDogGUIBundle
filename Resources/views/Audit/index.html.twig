@@ -1,0 +1,76 @@
+{% trans_default_domain "StevDataDogAuditReader" %}
+<div class="modal fade audit-modal" id="audit" data-backdrop="false">
+    <div class="modal-dialog hasWidth">
+        <div class="modal-content">
+            <h4 class="text-center">{{ 'Audit.title'|trans | desc('Audit')}}</h4>
+            <div class="audit-info"></div>
+            <div class="modal-body text-center">
+
+                <table id="audit-table" class="table table-condensed table-striped table-hover table-bordered pull-left">
+                    <thead>
+                        <tr>
+                            <th>{{ 'date' | trans | desc('Date')}}</th>
+                            <th>{{ 'action' | trans | desc('Action')}}</th>
+                            <th>{{ 'mentions' | trans | desc('Mentions') }}</th>
+                            <th>{{ 'user' | trans | desc('User') }}</th>
+                            <th>{{ 'TLoc' | trans | desc('TLoc') }}</th>
+                            <th>{{ 'TLuna' | trans | desc('TLuna') }}</th>
+                            <th>{{ 'Rez'|trans | desc('Rez') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in entries if entry.action != 'insert'%}
+                            {% set time = '' %}
+                            {% for key,modification in entry.diff %}
+
+                                {% if modification.old !=  modification.new%}
+
+                                    <tr class="partner_details cursor-pointer from-modal">
+                                        <td>
+                                            {{ entry.logged_at |date('d-m-Y H:i:s T', 'Europe/Bucharest') }}
+                                        </td>
+                                        <td>
+                                            {{ entry.action }}
+                                        </td>
+                                        <td>
+                                            {% if fieldMappings[key]['options'] is defined and fieldMappings[key]['options']['comment']  is defined%}
+                                                <b>{{ fieldMappings[key]['options']['comment']}}</b> :
+                                            {% else %}
+                                                <b>{{ key}}</b> :
+                                            {% endif%}
+                                            {% if modification.old is iterable %}
+                                                in <span class="highlight-change">{{ modification.old['label'] }}</span>
+                                            {% elseif modification.old != null %}
+                                                Din <span class="highlight-change">{{ modification.old }}</span>
+                                            {% endif %}
+                                            {% if modification.new is iterable %}
+                                                in <span class="highlight-change">{{ modification.new['label'] }}</span>
+                                            {% else %}
+                                                in <span class="highlight-change">{{ modification.new }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ entry.user }}
+                                        </td>
+                                        <td>
+                                            TLoc
+                                        </td>
+                                        <td>
+                                            TLUNA
+                                        </td>
+                                        <td>
+                                            REz
+                                        </td>
+                                    </tr>
+                                {% endif %}
+
+                                {% set time = entry.logged_at %}
+                            {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <button type="button" class="btn btn-success btn-xs" data-dismiss="modal">{{ 'close'|trans | desc('Close')}}</button>
+            </div>
+        </div>
+    </div>
+</div>
