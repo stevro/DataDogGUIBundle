@@ -21,6 +21,14 @@ class AuditReader
         $this->em = $em;
     }
 
+    /**
+     *
+     * @param string $entityId
+     * @param string $entityClass
+     * @param array $assocsToInclude
+     * @param bool $includeInserts
+     * @return array
+     */
     public function getAuditForEntity($entityId, $entityClass, array $assocsToInclude = array(), $includeInserts = true)
     {
         $meta = $this->em->getClassMetadata($entityClass);
@@ -98,7 +106,8 @@ class AuditReader
 
         $sql = <<<EOD
 SELECT al.diff, al.action, al.loggedAt, al.blame_id, aa.label as user
-FROM audit_logs AS al LEFT JOIN audit_associations AS aa ON al.blame_id = aa.id
+FROM audit_logs AS al
+LEFT JOIN audit_associations AS aa ON al.blame_id = aa.id
 WHERE al.tbl = :table AND al.blame_id IS NOT NULL AND al.source_id IN
 (SELECT id FROM audit_associations  WHERE tbl = :table AND fk=:fk)
 EOD;
@@ -115,12 +124,6 @@ EOD;
             $results[$i]['diff'] = json_decode($results[$i]['diff'], true);
             unset($results[$i]['diff']['updatedAt']);
         }
-
-//        if ((bool) $includeInserts === false) {
-//            $results = array_filter($results, function($elem) {
-//                return $elem['action'] !== 'insert';
-//            });
-//        }
 
         return $results;
     }

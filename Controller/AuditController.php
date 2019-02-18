@@ -53,28 +53,19 @@ class AuditController extends Controller
 
         $connection = $em->getConnection();
 
-        $queryUsers = $connection->prepare(
-                "SELECT * FROM audit_associations  WHERE tbl = 'User' AND fk IS NOT NULL"
-        );
-        $queryUsers->execute();
-        $users = $queryUsers->fetchAll();
-        $userRepo = $em->getRepository('CVSoftUserBundle:User');
-        foreach ($users as $key => $user) {
-            $userEntity = $userRepo->find($user['fk']);
-            if (!empty($userEntity)) {
-                $users[$user['id']] = $userEntity->getUsername();
-            }
-        }
-        $query = $connection->prepare(
-                "SELECT diff, action, logged_at, blame_id  FROM audit_logs  WHERE tbl = '" . $table . "' AND blame_id IS NOT NULL AND source_id IN "
-                . "(SELECT id FROM audit_associations  WHERE tbl = '" . $table . "' AND fk=" . $entityId . ")"
-        );
+        $sql = <<<EOD
+SELECT al.diff, al.action, al.loggedAt, al.blame_id, aa.label AS user
+FROM audit_logs  AS al
+INNER JOIN audit_associations AS aa ON aa.id = al.blame_id
+WHERE al.tbl = '{$table}' AND al.source_id IN (SELECT id FROM audit_associations  WHERE tbl = '{$table}' AND fk='{$entityId}')
+EOD;
+
+        $query = $connection->prepare($sql);
 
         $query->execute();
         $results = $query->fetchAll();
 
         for ($i = 0; $i < count($results); $i++) {
-            $results[$i]['user'] = $users[(int) $results[$i]['blame_id']];
             $results[$i]['diff'] = json_decode($results[$i]['diff'], true);
             unset($results[$i]['diff']['updatedAt']);
         }
