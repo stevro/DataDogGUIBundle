@@ -8,9 +8,11 @@
 namespace Stev\DataDogAuditGUIBundle\Services;
 
 
+use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityManager;
 use Gedmo\Loggable\Entity\Repository\LogEntryRepository;
+use Gedmo\Mapping\Annotation\Loggable;
 
 /**
  * Class AuditIndividualReader
@@ -40,26 +42,43 @@ class AuditIndividualReader
         $this->registry = $registry;
     }
 
-    public function getAuditForEntity($entityId, $entityClass)
+    public function getAuditForEntityByIdAndClass($entityId, $entityClass){
+        $this->em = $this->registry->getManagerForClass($entityClass);
+
+        $entity = $this->em->find($entityClass, $entityId);
+
+        if (!$entity) {
+            throw new \Exception('Entity with ID '.$entityId.' for class '.$entityClass.' was not found!');
+        }
+
+        return $this->getAuditForEntity($entity);
+    }
+
+    /**
+     * @param string $entityId
+     * @param string $entityClass
+     * @return \Gedmo\Loggable\Entity\LogEntry[]
+     * @throws \Doctrine\ORM\ORMException
+     * @throws \Doctrine\ORM\OptimisticLockException
+     * @throws \Doctrine\ORM\TransactionRequiredException
+     * @throws \ReflectionException
+     */
+    public function getAuditForEntity($entity)
     {
 
-        $entity = $this->em->getRepository($entityClass)->find($entityId);
+        $annotationReader = new AnnotationReader();
+        $reflClass = new \ReflectionClass($entity);
 
-        /**
-         * @var string $auditEntity
-         * AbstractLogEntry
-         *
-         */
-        $auditEntityClass = $entityClass.'Logger';
+        $ann = $annotationReader->getClassAnnotation($reflClass, Loggable::class);
 
-        $this->em = $registry->getManagerForClass($auditEntityClass);
+        $auditEntityClass = $ann->logEntryClass ? $ann->logEntryClass : 'Gedmo\Loggable\Entity\LogEntry';
 
         /** @var LogEntryRepository $auditRepo */
         $auditRepo = $this->em->getRepository($auditEntityClass);
 
-        $auditLogs = $auditRepo->findBy(['objectId' => $entityId, 'objectClass' => $entityClass]);
+        $auditLogs = $auditRepo->getLogEntries($entity);
 
-        dump($auditLogs);die;
+        return $auditLogs;
     }
 
 }

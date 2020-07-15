@@ -117,13 +117,22 @@ EOD;
     /**
      * @Route("/entity/{entityClass}/{entityId}/individual", name="audit_entity_individual_logs", options={"expose"=true})
      * @Method("GET")
+     *
+     * sample /audit/entity/AppBundle:EntityName/EntityID/individual
      */
     public function entityIndividualAuditAction(Request $request, $entityClass, $entityId)
     {
         /** @var AuditIndividualReader $auditReader */
         $auditReader = $this->get('stev_data_dog_audit_gui.audit_individual_reader');
 
-        $audit = $auditReader->getAuditForEntity($entityId, $entityClass);
+        $auditLogs = $auditReader->getAuditForEntityByIdAndClass($entityId, $entityClass);
+
+        return $this->render(
+            'StevDataDogAuditGUIBundle:AuditIndividual:entity.html.twig',
+            [
+                'entries' => $auditLogs,
+            ]
+        );
     }
 
 }
