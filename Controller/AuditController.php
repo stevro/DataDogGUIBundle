@@ -104,4 +104,9 @@ EOD;
         ));
     }
 
+    public function entityIndividualAuditAction(Request $request, $entityClass, $entityId)
+    {
+
+    }
+    
 }
