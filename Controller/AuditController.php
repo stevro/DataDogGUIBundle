@@ -2,9 +2,10 @@
 
 namespace Stev\DataDogAuditGUIBundle\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Method;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Stev\DataDogAuditGUIBundle\Services\AuditIndividualReader;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\Request;
 
 /*
@@ -36,10 +37,13 @@ class AuditController extends Controller
         $entityClass = $request->get('entityClass');
         $entityId = $request->get('entityid');
         if (empty($entityClass) && empty($entityId)) {
-            return $this->render('StevDataDogAuditGUIBundle:Audit:index.html.twig', array(
-                        'entries' => array(),
-                        'fieldMappings' => array()
-            ));
+            return $this->render(
+                'StevDataDogAuditGUIBundle:Audit:index.html.twig',
+                [
+                    'entries' => [],
+                    'fieldMappings' => [],
+                ]
+            );
         }
 
         $em = $this->getDoctrine()->getManager();
@@ -70,10 +74,13 @@ EOD;
             unset($results[$i]['diff']['updatedAt']);
         }
 
-        return $this->render('StevDataDogAuditGUIBundle:Audit:index.html.twig', array(
-                    'entries' => $results,
-                    'fieldMappings' => $fieldMappings
-        ));
+        return $this->render(
+            'StevDataDogAuditGUIBundle:Audit:index.html.twig',
+            [
+                'entries' => $results,
+                'fieldMappings' => $fieldMappings,
+            ]
+        );
     }
 
     /**
@@ -82,11 +89,11 @@ EOD;
      */
     public function entityAuditAction(Request $request, $entityClass, $entityId)
     {
-        $includeInserts = (bool) $request->query->get('includeInserts', true);
-        $assocsToInclude = $request->query->get('includeAssocs', array());
+        $includeInserts = (bool)$request->query->get('includeInserts', true);
+        $assocsToInclude = $request->query->get('includeAssocs', []);
 
         if (!is_array($assocsToInclude)) {
-            $assocsToInclude = array();
+            $assocsToInclude = [];
         }
 
         /* @var $auditReader \Stev\DataDogAuditGUIBundle\Services\AuditReader */
@@ -96,12 +103,36 @@ EOD;
 
         //$request->headers->get('content-type');
 
-        return $this->render('StevDataDogAuditGUIBundle:Audit:entity.html.twig', array(
-                    'entries' => $audit['results'],
-                    'assocs' => $audit['assocDiffs'],
-                    'fieldMappings' => $audit['fieldMappings'],
-                    'includeInserts' => $includeInserts,
-        ));
+        return $this->render(
+            'StevDataDogAuditGUIBundle:Audit:entity.html.twig',
+            [
+                'entries' => $audit['results'],
+                'assocs' => $audit['assocDiffs'],
+                'fieldMappings' => $audit['fieldMappings'],
+                'includeInserts' => $includeInserts,
+            ]
+        );
+    }
+
+    /**
+     * @Route("/entity/{entityClass}/{entityId}/individual", name="audit_entity_individual_logs", options={"expose"=true})
+     * @Method("GET")
+     *
+     * sample /audit/entity/AppBundle:EntityName/EntityID/individual
+     */
+    public function entityIndividualAuditAction(Request $request, $entityClass, $entityId)
+    {
+        /** @var AuditIndividualReader $auditReader */
+        $auditReader = $this->get('stev_data_dog_audit_gui.audit_individual_reader');
+
+        $auditLogs = $auditReader->getAuditForEntityByIdAndClass($entityId, $entityClass);
+
+        return $this->render(
+            'StevDataDogAuditGUIBundle:AuditIndividual:entity.html.twig',
+            [
+                'entries' => $auditLogs,
+            ]
+        );
     }
 
 }

@@ -1,0 +1,36 @@
+{% trans_default_domain "StevDataDogAuditReader" %}
+
+<div class="table-responsive">
+    <table id="" class="table table-bordered table-striped audit-table">
+        <thead>
+            <tr>
+                <th>{{ 'date' | trans | desc('Date')}}</th>
+                <th>{{ 'action' | trans | desc('Action')}}</th>
+                <th>{{ 'changes' | trans | desc('Changes') }}</th>
+                <th>{{ 'user' | trans | desc('User') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+
+                <tr class="">
+                    <td>
+                        {{ entry.loggedAt  |date('d-m-Y H:i:s T', app.user.timezone|default('UTC')) }}<br/>
+                    </td>
+                    <td>
+                        {{ entry.action }}
+                    </td>
+                    <td>
+                        {% for key,data in entry.data if key != 'updatedAt'%}
+                            {{ formatAuditData(key, data) }}<br/>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {{ entry.username }}
+                    </td>
+                </tr>
+
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
