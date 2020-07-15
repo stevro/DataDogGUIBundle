@@ -2,6 +2,8 @@
 
 namespace Stev\DataDogAuditGUIBundle\Twig;
 
+use Symfony\Component\Security\Core\User\UserInterface;
+
 class TwigExtension extends \Twig_Extension
 {
 
@@ -42,10 +44,11 @@ class TwigExtension extends \Twig_Extension
             $tz = new \DateTimeZone($timezoneString);
             $data->setTimezone($tz);
 
-            return $key.': '.$data->format('d-m-Y H:i T');
+            return $key.': '.$data->format('d-m-Y H:i:s T');
         }
 
         if (is_object($data)) {
+
             if (method_exists($data, '__toString')) {
                 return $key.': '.(string)$data;
             }

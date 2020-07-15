@@ -66,6 +66,8 @@ class AuditIndividualReader
     public function getAuditForEntity($entity)
     {
 
+        $this->em = $this->registry->getManagerForClass(get_class($entity));
+
         $annotationReader = new AnnotationReader();
         $reflClass = new \ReflectionClass($entity);
 
