@@ -29,7 +29,7 @@ class AuditReader
      * @param bool $includeInserts
      * @return array
      */
-    public function getAuditForEntity($entityId, $entityClass, array $assocsToInclude = array(), $includeInserts = true)
+    public function getAuditForEntity($entityId, $entityClass, array $assocsToInclude = [], $includeInserts = true)
     {
         $meta = $this->em->getClassMetadata($entityClass);
 
@@ -39,18 +39,18 @@ class AuditReader
             $fieldMappings[$field] = $this->em->getClassMetadata($assocMapping['targetEntity'])->table;
         }
 
-        $assocDiffs = array();
+        $assocDiffs = [];
         if (!empty($assocsToInclude)) {
             $assocDiffs = $this->getAuditForAssoc($meta, $assocsToInclude, $entityId, $includeInserts);
         }
 
         $results = $this->buildResultsDiff($entityId, $entityClass, $includeInserts);
 
-        return array(
+        return [
             'results' => $results,
             'assocDiffs' => $assocDiffs,
             'fieldMappings' => $fieldMappings,
-        );
+        ];
     }
 
     /**
@@ -65,7 +65,7 @@ class AuditReader
      */
     private function getAuditForAssoc($meta, $assocsToInclude, $fk, $includeInserts)
     {
-        $diff = array();
+        $diff = [];
         $currentObj = $this->em->getRepository($meta->rootEntityName)->find($fk);
 
         if (!$currentObj) {
@@ -73,7 +73,6 @@ class AuditReader
         }
 
         foreach ($meta->associationMappings as $field => $assocMapping) {
-
             if (!in_array($assocMapping['targetEntity'], $assocsToInclude)) {
                 continue;
             }
@@ -86,10 +85,34 @@ class AuditReader
 
             if ($assoc instanceof \Doctrine\Common\Collections\Collection) {
                 foreach ($assoc as $a) {
-                    $diff[$field][(string) $a] = $this->buildResultsDiff($a->getId(), $assocMapping['targetEntity'], $includeInserts);
+                    if (method_exists($a, 'toString')) {
+                        $diff[$field][(string)$a] = $this->buildResultsDiff(
+                            $a->getId(),
+                            $assocMapping['targetEntity'],
+                            $includeInserts
+                        );
+                    } else {
+                        $diff[$field][$a->getId()] = $this->buildResultsDiff(
+                            $a->getId(),
+                            $assocMapping['targetEntity'],
+                            $includeInserts
+                        );
+                    }
                 }
             } else {
-                $diff[$field][(string) $assoc] = $this->buildResultsDiff($assoc->getId(), $assocMapping['targetEntity'], $includeInserts);
+                if (method_exists($assoc, 'toString')) {
+                    $diff[$field][(string)$assoc] = $this->buildResultsDiff(
+                        $assoc->getId(),
+                        $assocMapping['targetEntity'],
+                        $includeInserts
+                    );
+                } else {
+                    $diff[$field][$assoc->getId()] = $this->buildResultsDiff(
+                        $assoc->getId(),
+                        $assocMapping['targetEntity'],
+                        $includeInserts
+                    );
+                }
             }
         }
 
@@ -112,19 +135,17 @@ WHERE al.tbl = :table AND al.blame_id IS NOT NULL AND al.source_id IN
 (SELECT id FROM audit_associations  WHERE tbl = :table AND fk=:fk)
 EOD;
 
-        if ((bool) $includeInserts === false) {
-            $sql .= ' AND al.type != "insert" ';
+        if ((bool)$includeInserts === false) {
+            $sql .= ' AND al.action != "insert" ';
         }
 
         $query = $connection->prepare($sql);
 
-        $query->execute(array('fk' => $fk, 'table' => $tbl));
+        $query->execute(['fk' => $fk, 'table' => $tbl]);
         $results = $query->fetchAll();
 
         for ($i = 0; $i < count($results); $i++) {
-
             $results[$i]['diff'] = json_decode(trim(stripslashes($results[$i]['diff']), '"'), true);
-
             //unset($results[$i]['diff']['updatedAt']);
         }
 

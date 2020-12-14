@@ -19,6 +19,7 @@ class TwigExtension extends \Twig_Extension
     {
         return [
             new \Twig_SimpleFunction('formatAuditData', [$this, 'formatAuditData']),
+            new \Twig_SimpleFunction('formatKeylessAuditData', [$this, 'formatKeylessAuditData']),
 
         ];
     }
@@ -70,6 +71,48 @@ class TwigExtension extends \Twig_Extension
         }
 
         return $key.': '.(string)$data;
+    }
+
+    /**
+     *
+     * @param string|array|object $data
+     * @param string $timezoneString
+     * @return string
+     * @throws \Exception
+     */
+    public function formatKeylessAuditData($data, $timezoneString = 'UTC')
+    {
+        if ($data instanceof \DateTime) {
+
+            $tz = new \DateTimeZone($timezoneString);
+            $data->setTimezone($tz);
+
+            return $data->format('d-m-Y H:i:s T');
+        }
+
+        if (is_object($data)) {
+
+            if (method_exists($data, '__toString')) {
+                return (string)$data;
+            }
+
+            if (method_exists($data, 'getName')) {
+                return (string)$data->getName();
+            }
+
+            throw new \Exception('Unable to render audit data for key '.$key.' with object '.get_class($data));
+        }
+
+        if (is_array($data)) {
+            return implode(', ', $data);
+        }
+
+        if(is_bool($data)){
+            $s = $data === true ? 'DA' : 'NU';
+            return $s;
+        }
+
+        return (string)$data ? (string)$data : '-';
     }
 
 
