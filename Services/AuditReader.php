@@ -145,7 +145,7 @@ EOD;
         $results = $query->fetchAll();
 
         for ($i = 0; $i < count($results); $i++) {
-            $results[$i]['diff'] = json_decode(trim(stripslashes($results[$i]['diff']), '"'), true);
+            $results[$i]['diff'] = json_decode($results[$i]['diff'], true);
             //unset($results[$i]['diff']['updatedAt']);
         }
 
