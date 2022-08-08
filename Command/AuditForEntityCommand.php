@@ -74,7 +74,7 @@ class AuditForEntityCommand extends ContainerAwareCommand
 
             $row = [
                 'action' => $result['action'],
-                'loggedAt' => $result['loggedAt'],
+                'loggedAt' => $result['loggedAt'] . ' UTC',
                 'user' => $result['user'],
                 'diff' => join(PHP_EOL, $formattedDiff),
             ];
