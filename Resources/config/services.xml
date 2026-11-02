@@ -15,7 +15,6 @@
            <argument type="service" id="doctrine" />
         </service>
         <service id="stev_data_dog_audit_gui.twig.extension" class="Stev\DataDogAuditGUIBundle\Twig\TwigExtension">
-           <argument type="service" id="doctrine" />
             <tag name="twig.extension"/>
         </service>
     </services>
